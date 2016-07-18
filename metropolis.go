@@ -1,7 +1,7 @@
 package main
 
 // This is a framework for a metropolis-coupled search. In this example, the program searches
-// for a number that has zero difference from 500. It does this by starting at zero and mutating
+// for a number that has zero difference from 50000. It does this by starting at zero and mutating
 // the state, either accepting the new state or not. Multiple threads are run in parallel to pull
 // the state out of local optima (not a problem in this example, meh).
 //
@@ -19,13 +19,13 @@ import (
 
 const THREADS = 6
 
-var Heat =  [...]float64{
+var Heat =  [...]float64{       // Example values only
                     0,
                     0.00001,
-                    0.0001,
                     0.0005,
-                    0.001,
-                    0.01,
+                    0.005,
+                    0.05,
+                    0.5,
                     }
 
 // Each thread will indicate it's finished its current iteration by sending a pointer to the current state.
@@ -68,15 +68,15 @@ func main() {
 
 func (s *State) SetScore() {   // As a convention, lets say lower is better, i.e. 0 is best possible score
 
-    // In this example, the score is the distance to the number 500
-    s.Score = 500 - s.World
+    // In this example, the score is the distance to the number 50000
+    s.Score = 50000 - s.World
     if s.Score < 0 {
         s.Score *= -1
     }
 }
 
 func (s *State) Mutate() {
-    s.World += rand.Int31n(100000) - 50000
+    s.World += rand.Int31n(100) - 50
     return
 }
 
@@ -90,7 +90,7 @@ func NewState() *State {
     return s
 }
 
-// ----------------------------------------------------------------- HUB (controller)
+// ----------------------------------------------------------------- HUB (controller) and CHAIN (thread)
 
 func hub() {
 
@@ -114,8 +114,10 @@ func hub() {
         }
 
         for n := 0; n < THREADS; n++ {
+            fmt.Printf("%5d ", state_pointers[n].Score)
             ResumeChan[n] <- state_pointers[n]
         }
+        fmt.Printf("\n")
     }
 }
 
@@ -131,9 +133,9 @@ func chain(index int) {
         my_state.Mutate()
         my_state.SetScore()
 
-        // Revert to old state?
+        // Revert to old state iff new state is worse AND heat-based roll fails
         if my_state.Score > old_state.Score && rand.Float64() > Heat[index] {
-            *my_state = old_state
+            my_state = &old_state
         }
 
         ReportChan[index] <- my_state
