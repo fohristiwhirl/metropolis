@@ -31,8 +31,7 @@ var Heat =  [...]float64{       // Example values only
 // Each thread will indicate it's finished its current iteration by sending a pointer to the current state.
 // The hub will tell the thread to resume by sending it a pointer to the state it will work on next iteration.
 
-var ReportChan [THREADS]chan *State
-var ResumeChan [THREADS]chan *State
+var PtrChan [THREADS]chan *State
 
 type State struct {
     Score int32
@@ -45,15 +44,14 @@ func init() {
     rand.Seed(time.Now().UTC().UnixNano())
 
     for n := 0 ; n < THREADS ; n++ {
-        ReportChan[n] = make(chan *State)
-        ResumeChan[n] = make(chan *State)
+        PtrChan[n] = make(chan *State)
     }
 }
 
 func main() {
     for n := 0 ; n < THREADS ; n++ {
         go chain(n)
-        ResumeChan[n] <- NewState()
+        PtrChan[n] <- NewState()
     }
 
     hub()
@@ -99,7 +97,8 @@ func hub() {
     for {
 
         for n := 0; n < THREADS; n++ {
-            state_pointers[n] = <- ReportChan[n]
+            state_pointers[n] = <- PtrChan[n]
+
             if state_pointers[n].Score == 0 {
                 fmt.Printf("Success in thread %d: ", n)
                 state_pointers[n].Dump()
@@ -115,7 +114,7 @@ func hub() {
 
         for n := 0; n < THREADS; n++ {
             fmt.Printf("%5d ", state_pointers[n].Score)
-            ResumeChan[n] <- state_pointers[n]
+            PtrChan[n] <- state_pointers[n]
         }
         fmt.Printf("\n")
     }
@@ -126,7 +125,7 @@ func chain(index int) {
     var my_state *State
 
     for {
-        my_state = <- ResumeChan[index]
+        my_state = <- PtrChan[index]
 
         old_state := *my_state      // Keep a copy of the initial state in case we don't accept the mutation
 
@@ -138,6 +137,6 @@ func chain(index int) {
             my_state = &old_state
         }
 
-        ReportChan[index] <- my_state
+        PtrChan[index] <- my_state
     }
 }
