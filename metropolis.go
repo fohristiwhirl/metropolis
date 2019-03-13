@@ -56,10 +56,10 @@ func main() {
 
     hub()
 
-    // Once we find a solution, wait for user input (prevent window from closing)...
+    // Once we find a solution, wait for user input (prevent any window from closing)...
 
-    reader := bufio.NewReader(os.Stdin)
-    reader.ReadString('\n')
+    scanner := bufio.NewScanner(os.Stdin)
+    scanner.Scan()
 }
 
 // ----------------------------------------------------------------- METHODS for dealing with a State
